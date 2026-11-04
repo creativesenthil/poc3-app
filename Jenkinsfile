@@ -16,6 +16,7 @@ pipeline {
             steps {
                 sh '''
                     java -version
+                    javac -version
                     mvn -version
                     docker --version
                 '''
@@ -24,13 +25,27 @@ pipeline {
 
         stage('Maven Build') {
             steps {
-                sh 'mvn -B -DskipTests package'
+                sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+
+                    java -version
+                    javac -version
+                    mvn -B -DskipTests package
+                '''
             }
         }
 
         stage('Unit Tests') {
             steps {
-                sh 'mvn -B test'
+                sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+
+                    java -version
+                    javac -version
+                    mvn -B test
+                '''
             }
         }
 
