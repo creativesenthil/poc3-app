@@ -18,16 +18,10 @@ pipeline {
         stage('Environment Validation') {
             steps {
                 sh '''
-                    echo "===== JAVA VERSION ====="
+                    echo "=== Environment Validation ==="
                     java -version
-
-                    echo "===== JAVAC VERSION ====="
                     javac -version
-
-                    echo "===== MAVEN VERSION ====="
                     mvn -version
-
-                    echo "===== DOCKER VERSION ====="
                     docker --version
                 '''
             }
@@ -36,11 +30,10 @@ pipeline {
         stage('Maven Build') {
             steps {
                 sh '''
-                    echo "===== MAVEN BUILD ====="
+                    echo "=== Maven Build ==="
                     java -version
                     javac -version
-
-                    mvn -B clean package -DskipTests
+                    mvn -B -DskipTests package
                 '''
             }
         }
@@ -48,7 +41,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 sh '''
-                    echo "===== UNIT TESTS ====="
+                    echo "=== Unit Tests ==="
                     mvn -B test
                 '''
             }
@@ -63,7 +56,6 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    echo "===== DOCKER BUILD ====="
                     docker build -t poc3-app:${BUILD_NUMBER} .
                 '''
             }
@@ -72,27 +64,25 @@ pipeline {
         stage('Docker Validation') {
             steps {
                 sh '''
-                    echo "===== DOCKER VALIDATION ====="
                     docker image inspect poc3-app:${BUILD_NUMBER}
                 '''
             }
         }
 
-        stage('Argo CD Deployment') {
+        stage('Argo CD Sync') {
             steps {
                 sh '''
-                    echo "===== ARGO CD DEPLOYMENT ====="
+                    echo "=== Argo CD Sync ==="
+                    argocd app sync poc3-app
+                '''
+            }
+        }
 
-                    if command -v argocd >/dev/null 2>&1; then
-                        echo "Argo CD CLI found"
-
-                        argocd app get poc3-app || true
-
-                        echo "Argo CD stage is ready"
-                    else
-                        echo "Argo CD CLI is not installed yet."
-                        echo "Argo CD deployment configuration will be completed after Argo CD installation."
-                    fi
+        stage('Argo CD Wait') {
+            steps {
+                sh '''
+                    echo "=== Waiting for Argo CD deployment ==="
+                    argocd app wait poc3-app --health --sync --timeout 300
                 '''
             }
         }
@@ -100,11 +90,11 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completed successfully'
+            echo 'Pipeline completed successfully and application deployment was triggered through Argo CD'
         }
 
         failure {
-            echo 'Pipeline failed'
+            echo 'Pipeline failed. Check the failed stage above.'
         }
 
         always {
